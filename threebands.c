@@ -161,12 +161,14 @@ int main (int argc, char *argv[])
 
   analog_cutoff = tan (PI * cutoff / sr);
   analog_cutoff2 = tan (PI * cutoff2 / sr);
+
+  int mainOrder = 4;
 	
   dccutter = create_iirfilter (2, TYPE_HIGH, tan (PI / sr), analog_cutoff2); //get rid of any dc
   avcfilter = create_iirfilter (2, TYPE_LOW, tan (PI * AVC_FREQ / sr), 0.0);
-  lowfilter = create_iirfilter (6, TYPE_LOW, tan (PI * LOW_MID_FREQ / sr), 0.0);
-  midfilter = create_iirfilter (6, TYPE_BAND, tan (PI * LOW_MID_FREQ / sr), tan (PI * MID_HIGH_FREQ / sr));
-  highfilter = create_iirfilter (6, TYPE_HIGH, tan (PI * MID_HIGH_FREQ / sr), 0.0);
+  lowfilter = create_iirfilter (mainOrder, TYPE_LOW, tan (PI * LOW_MID_FREQ / sr), 0.0);
+  midfilter = create_iirfilter (mainOrder, TYPE_BAND, tan (PI * LOW_MID_FREQ / sr), tan (PI * MID_HIGH_FREQ / sr));
+  highfilter = create_iirfilter (mainOrder, TYPE_HIGH, tan (PI * MID_HIGH_FREQ / sr), 0.0);
   for (int i = 0; i < 3; i++)
     {
       brightnessFilters [i] = create_iirfilter (4, TYPE_LOW, tan (PI * BRIGHTNESS_FREQ / sr), 0.0);
@@ -385,7 +387,7 @@ void RenderScene(void)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  
 
-  float wallWidth = 400;
+  float wallWidth = 350;
   float columnWidth = 20;
   float wallHeight = 200;
   float barScale = 500;
@@ -393,9 +395,11 @@ void RenderScene(void)
   float barFZ = columnWidth / 2;
   float barBZ = barFZ  - columnWidth;
   float barWidth = 20;
-  float barSpacing = barWidth * 2.5;
+  float barSpacing = 90;
   float topLightScale = .9;
   float wallBrightness = .2;
+  float lightHeightThreshold = .5;
+
 
   // Save the matrix state and do the rotations
   glPushMatrix();
@@ -407,8 +411,8 @@ void RenderScene(void)
 
   // set up after camera so that they are fixed into the scene
   //just a small gray so that we can see everything
-  GLfloat whiteLight[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, whiteLight);
+  //  GLfloat whiteLight[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+  //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, whiteLight);
   //set up these arrays for convenience
   GLfloat lightPos[] = {0., 0., 0., 1.0f};
   GLfloat sourceLight [] = {0., 0., 0., 1.0f};
@@ -443,40 +447,32 @@ void RenderScene(void)
   glRotatef (-90.0, 1.0, 0.0, 0.);
   MultiQuad (wallWidth, wallWidth, 10, 10, GL_TRUE);
   glPopMatrix ();
-  
-  //avc
-  glBegin (GL_QUADS);  
-  glColor3f (1.0f, 1.0f, 1.0f);
-  glVertex3f (-100, 0, barFZ);
-  glVertex3f (-60, 0, barFZ);
-  float avcHeight = barScale * avc;
-  glVertex3f (-60, avcHeight, barFZ);
-  glVertex3f (-100, avcHeight, barFZ);
-  glEnd ();
-  
-   
+ 
+  float lightFactor = 1;
   //left
   glColor3f (1., 0., 0.);
   float leftHeight = barScale * (brightness [0] / (1 + avcScale * avc)) ;
   glPushMatrix ();
   glTranslatef (-barSpacing, 0., 0.);
   MultiColumn (barWidth, leftHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
-  sourceLight [0] = 1.;
-  lightPos [1] = topLightScale * leftHeight;
+  lightFactor = fmin (1.0, leftHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [0] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * leftHeight;
   glLightfv(GL_LIGHT0, GL_DIFFUSE, sourceLight);
   glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-    glEnable(GL_LIGHT0);
+  glEnable(GL_LIGHT0);
   sourceLight [0] = 0.;
   glPopMatrix ();
   //mid
   glColor3f (0.0f, 1.0f, 0.0f);
   float midHeight = barScale * (brightness [1] / (1 + avcScale * avc)) ;
   MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
-  sourceLight [1] = 1.;
-  lightPos [1] = topLightScale * midHeight;
+  lightFactor = fmin (1.0, midHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [1] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * midHeight;
   glLightfv(GL_LIGHT1, GL_DIFFUSE, sourceLight);
   glLightfv(GL_LIGHT1, GL_POSITION, lightPos);
-    glEnable(GL_LIGHT1);
+  glEnable(GL_LIGHT1);
   sourceLight [1] = 0.;
   //right
   glColor3f (0.0f, 0.0f, 1.0f);
@@ -484,8 +480,9 @@ void RenderScene(void)
   glPushMatrix ();
   glTranslatef (barSpacing, 0., 0.);
   MultiColumn (barWidth, rightHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
-  sourceLight [2] = 1.;
-  lightPos [1] = topLightScale * rightHeight;
+  lightFactor = fmin (1.0, rightHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [2] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * rightHeight;
   glLightfv(GL_LIGHT2, GL_DIFFUSE, sourceLight);
   glLightfv(GL_LIGHT2, GL_POSITION, lightPos);
   glEnable(GL_LIGHT2);
