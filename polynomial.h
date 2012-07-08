@@ -8,6 +8,7 @@
 typedef struct polynomial
 {
   double complex terms[POLYNOMIAL_MAX_TERMS];
+  int maxExp;
 } poly_t;
 
 void initpoly (poly_t *poly);
