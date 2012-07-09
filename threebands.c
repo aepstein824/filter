@@ -472,7 +472,7 @@ void RenderScene(void)
   float lightFactor = 1;
   //left
   glColor3f (1., 0., 0.);
-  float leftHeight = barScale * (brightness [0] / (1 + avcScale * avc)) ;
+  float leftHeight = fmin (barScale * (brightness [0] / (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (-barSpacing, 0., 0.);
   MultiColumn (barWidth, leftHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
@@ -486,7 +486,7 @@ void RenderScene(void)
   glPopMatrix ();
   //mid
   glColor3f (0.0f, 1.0f, 0.0f);
-  float midHeight = barScale * (brightness [1] / (1 + avcScale * avc)) ;
+  float midHeight = fmin (barScale * (brightness [1] / (1 + avcScale * avc)), wallHeight);
   MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
   lightFactor = fmin (1.0, midHeight / (lightHeightThreshold * wallHeight));
   sourceLight [1] = lightFactor * 1.;
@@ -497,7 +497,7 @@ void RenderScene(void)
   sourceLight [1] = 0.;
   //right
   glColor3f (0.0f, 0.0f, 1.0f);
-  float rightHeight = barScale * (brightness [2] / (1 + avcScale * avc)) ;
+  float rightHeight = fmin (barScale * (brightness [2] / (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (barSpacing, 0., 0.);
   MultiColumn (barWidth, rightHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
