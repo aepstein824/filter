@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include <jack/jack.h>
 
@@ -25,6 +26,7 @@
 //declare opengl callbacks
 void ChangeSize (int w, int h);
 void SetupScene ();
+void Keyboard (unsigned char key, int x, int y);
 void SpecialKeys (int key, int x, int y);
 void RenderScene ();
 
@@ -55,7 +57,8 @@ iirfilter_t *brightnessFilters[3];
 //opengl parameters
 static GLfloat xRot = 0.0f;
 static GLfloat yRot = 0.0f;
-
+int isRotating = 0;
+clock_t startTick = 0;
 
 /**
  * The process callback for this JACK application is called in a
@@ -107,6 +110,7 @@ int main (int argc, char *argv[])
   glutInitWindowSize (800, 600);
   glutCreateWindow ("Threebands");
   glutReshapeFunc (ChangeSize);
+  glutKeyboardFunc (Keyboard);
   glutSpecialFunc (SpecialKeys);
   glutDisplayFunc (RenderScene);
   glutIdleFunc (RenderScene);
@@ -161,12 +165,14 @@ int main (int argc, char *argv[])
 
   analog_cutoff = tan (PI * cutoff / sr);
   analog_cutoff2 = tan (PI * cutoff2 / sr);
+
+  int mainOrder = 4;
 	
   dccutter = create_iirfilter (2, TYPE_HIGH, tan (PI / sr), analog_cutoff2); //get rid of any dc
   avcfilter = create_iirfilter (2, TYPE_LOW, tan (PI * AVC_FREQ / sr), 0.0);
-  lowfilter = create_iirfilter (6, TYPE_LOW, tan (PI * LOW_MID_FREQ / sr), 0.0);
-  midfilter = create_iirfilter (6, TYPE_BAND, tan (PI * LOW_MID_FREQ / sr), tan (PI * MID_HIGH_FREQ / sr));
-  highfilter = create_iirfilter (6, TYPE_HIGH, tan (PI * MID_HIGH_FREQ / sr), 0.0);
+  lowfilter = create_iirfilter (mainOrder, TYPE_LOW, tan (PI * LOW_MID_FREQ / sr), 0.0);
+  midfilter = create_iirfilter (mainOrder, TYPE_BAND, tan (PI * LOW_MID_FREQ / sr), tan (PI * MID_HIGH_FREQ / sr));
+  highfilter = create_iirfilter (mainOrder, TYPE_HIGH, tan (PI * MID_HIGH_FREQ / sr), 0.0);
   for (int i = 0; i < 3; i++)
     {
       brightnessFilters [i] = create_iirfilter (4, TYPE_LOW, tan (PI * BRIGHTNESS_FREQ / sr), 0.0);
@@ -279,35 +285,37 @@ void ChangeSize (int w, int h)
 // the scene.
 void SetupScene()
 {
-  // Light values and coordinates
-  GLfloat  whiteLight[] = { 0.45f, 0.45f, 0.45f, 1.0f };
-  GLfloat  sourceLight[] = { 0.25f, 0.25f, 0.25f, 1.0f };
-  GLfloat	 lightPos[] = { -50.f, 25.0f, 250.0f, 0.0f };
 
   glEnable(GL_DEPTH_TEST);	// Hidden surface removal
-  glFrontFace(GL_CCW);		// Counter clock-wise polygons face out
+  glFrontFace(GL_CW);		// Counter clock-wise polygons face out
   //glEnable(GL_CULL_FACE);		// Do not calculate inside of jet
+
 
   // Enable lighting
   glEnable(GL_LIGHTING);
-
-  // Setup and enable light 0
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, whiteLight);
-  glLightfv(GL_LIGHT0, GL_AMBIENT, sourceLight);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, sourceLight);
-  glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-  glEnable(GL_LIGHT0);
 
   // Enable color tracking
   glEnable(GL_COLOR_MATERIAL);
 	
   // Set Material properties to follow glColor values
-  glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+  glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
   // Black blue background
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
+//
+void Keyboard(unsigned char key, int x, int y){
+  switch(key){
+  case ' ':
+    isRotating = !isRotating;
+    startTick = clock ();
+    break;
+  default:
+    break;
+  }
+  return;
+}
 
 // Respond to arrow keys
 void SpecialKeys(int key, int x, int y)
@@ -318,11 +326,14 @@ void SpecialKeys(int key, int x, int y)
   if(key == GLUT_KEY_DOWN)
     xRot += 5.0f;
 
-  if(key == GLUT_KEY_LEFT)
-    yRot -= 5.0f;
+  if (!isRotating)
+    {
+      if(key == GLUT_KEY_LEFT)
+	yRot -= 5.0f;
 
-  if(key == GLUT_KEY_RIGHT)
-    yRot += 5.0f;
+      if(key == GLUT_KEY_RIGHT)
+	yRot += 5.0f;
+    }
                 
   xRot = (GLfloat)((const int)xRot % 360);
   yRot = (GLfloat)((const int)yRot % 360);
@@ -331,17 +342,17 @@ void SpecialKeys(int key, int x, int y)
   glutPostRedisplay();
 }
 
-void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum)
+void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum, int posNormal)
 {
-  glNormal3f (0.f, 0.f, 1.f);
-  float tileWidth = width / wNum;
-  float tileHeight = height / hNum;
-  if (wNum < 1)
+  glNormal3f (0.f, 0.f, posNormal ? 1 : -1);
+    if (wNum < 1)
     { wNum = 1;
     }
   if (hNum < 1)
     { hNum = 1;
     }
+  float tileWidth = width / wNum;
+  float tileHeight = height / hNum;
   glBegin (GL_QUADS);
   for (int i = 0; i < wNum; i++)
     {
@@ -356,7 +367,7 @@ void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum)
   glEnd ();
 }
 
-void MultiColumn (double width, double height, int wNum, int hNum, int top, int bottom)
+void MultiColumn (double width, double height, int wNum, int hNum, int top, int bottom, int posNormal)
 { double xTrans[4] = {-.5, .5, .5, -.5};
   double zTrans[4] = {.5, .5, -.5, -.5};
   
@@ -365,7 +376,7 @@ void MultiColumn (double width, double height, int wNum, int hNum, int top, int 
       glPushMatrix ();
       glTranslatef (width * xTrans[i], 0.0, width * zTrans[i]);
       glRotatef (90 * i, 0., 1., 0.);
-      MultiQuad (width, height, wNum, hNum);
+      MultiQuad (width, height, wNum, hNum, posNormal);
       glPopMatrix ();
     }
   if (top)
@@ -373,7 +384,7 @@ void MultiColumn (double width, double height, int wNum, int hNum, int top, int 
       glPushMatrix ();
       glTranslatef (-.5 * width, height, .5 * width);
       glRotatef (-90, 1., 0., 0.);
-      MultiQuad (width, width, wNum, wNum);
+      MultiQuad (width, width, wNum, wNum, posNormal);
       glPopMatrix ();
     }
     if (bottom)
@@ -381,7 +392,7 @@ void MultiColumn (double width, double height, int wNum, int hNum, int top, int 
       glPushMatrix ();
       glTranslatef (-.5 * width, 0, -.5 * width);
       glRotatef (90, 1., 0., 0.);
-      MultiQuad (width, width, wNum, wNum);
+      MultiQuad (width, width, wNum, wNum, posNormal);
       glPopMatrix ();
     }
 }
@@ -393,219 +404,111 @@ void RenderScene(void)
 
   // Clear the window with current clearing color
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+ 
 
   float wallWidth = 500;
   float columnWidth = 20;
   float wallHeight = 200;
-  float barScale = 1000;
+  float barScale = 500;
   float avcScale = 1;
   float barFZ = columnWidth / 2;
   float barBZ = barFZ  - columnWidth;
   float barWidth = 20;
-  float barSpacing = barWidth * 2.5;
-
+  float barSpacing = 90;
+  float topLightScale = .9;
+  float wallBrightness = .2;
+  float lightHeightThreshold = .5;
+  double rotFreq = 5;
 
   // Save the matrix state and do the rotations
   glPushMatrix();
+  glTranslatef(0.0f, -.5 * wallHeight, -.45 * wallWidth);
   glRotatef(xRot, 1.0f, 0.0f, 0.0f);
-  glTranslatef(0.0f, -.5 * wallHeight, -wallWidth / 2);
+  if (isRotating)
+    yRot = (int) ((clock () - startTick) / ((float)CLOCKS_PER_SEC) * (360. / rotFreq)) % 360;    
   glRotatef(yRot, 0.0f, 1.0f, 0.0f);
 
   //room space, at 0 altitude, in the middle of the floor
 
+  // set up after camera so that they are fixed into the scene
+  //just a small gray so that we can see everything
+  //  GLfloat whiteLight[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+  //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, whiteLight);
+  //set up these arrays for convenience
+  GLfloat lightPos[] = {0., 0., 0., 1.0f};
+  GLfloat sourceLight [] = {0., 0., 0., 1.0f};
+
+  glColor3f (wallBrightness, wallBrightness, wallBrightness);	     
   //front wall
   glPushMatrix ();
   glTranslatef (-.5 * wallWidth, 0.0f, -.5 * wallWidth);
-  glColor3f (1., .5, 1.0f);
-  MultiQuad (wallWidth, wallHeight, 10, 10);
+  MultiQuad (wallWidth, wallHeight, 10, 10, GL_TRUE);
   glPopMatrix ();
   //left wall
   glPushMatrix ();
   glTranslatef (-.5 * wallWidth, 0., .5 * wallWidth);
   glRotatef (90., 0., 1.0, 0.);
-  glColor3f (.5, 1., 1.);
-  MultiQuad (wallWidth, wallHeight, 10, 10);
+  MultiQuad (wallWidth, wallHeight, 10, 10, GL_TRUE);
   glPopMatrix ();
   //right wall
   glPushMatrix ();
-  glTranslatef (.5 * wallWidth, 0., .5 * wallWidth);
-  glRotatef (90., 0., 1.0, 0.);
-  glColor3f (1., 1., .5);
-  MultiQuad (wallWidth, wallHeight, 10, 10);
+  glTranslatef (.5 * wallWidth, 0., -.5 * wallWidth);
+  glRotatef (-90., 0., 1.0, 0.);
+  MultiQuad (wallWidth, wallHeight, 10, 10, GL_TRUE);
   glPopMatrix ();
-  //front wall
+  //rear wall
   glPushMatrix ();
-  glTranslatef (-.5 * wallWidth, 0., .5 * wallWidth);
-  glColor3f (.7, .7, .7);
-  MultiQuad (wallWidth, wallHeight, 10, 10);
+  glTranslatef (.5 * wallWidth, 0., .5 * wallWidth);
+  glRotatef (-180., 0., 1.0, 0.);
+  MultiQuad (wallWidth, wallHeight, 10, 10, GL_TRUE);
   glPopMatrix ();
-		
-  
   //floor
   glPushMatrix ();
   glTranslatef (-.5 * wallWidth, 0.0f, .5 * wallWidth);
   glRotatef (-90.0, 1.0, 0.0, 0.);
-  glColor3f (1.0f, .5, .5);
-  MultiQuad (wallWidth, wallWidth, 10, 10);
+  MultiQuad (wallWidth, wallWidth, 10, 10, GL_TRUE);
   glPopMatrix ();
-
-  glNormal3f (0.0f, 0.0f, 1.0f);
-  //avc
-  glBegin (GL_QUADS);  
-  glColor3f (1.0f, 1.0f, 1.0f);
-  glVertex3f (-100, 0, barFZ);
-  glVertex3f (-60, 0, barFZ);
-  float avcHeight = barScale * avc;
-  glVertex3f (-60, avcHeight, barFZ);
-  glVertex3f (-100, avcHeight, barFZ);
-  glEnd ();
-  
-   
+ 
+  float lightFactor = 1;
   //left
   glColor3f (1., 0., 0.);
-  float leftHeight = barScale * (brightness [0] / (1 + avcScale * avc)) ;
+  float leftHeight = fmin (barScale * (brightness [0] / (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (-barSpacing, 0., 0.);
-  MultiColumn (barWidth, leftHeight, 10, 10, GL_TRUE, GL_FALSE);
+  MultiColumn (barWidth, leftHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
+  lightFactor = fmin (1.0, leftHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [0] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * leftHeight;
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, sourceLight);
+  glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+  glEnable(GL_LIGHT0);
+  sourceLight [0] = 0.;
   glPopMatrix ();
   //mid
   glColor3f (0.0f, 1.0f, 0.0f);
-  float midHeight = barScale * (brightness [1] / (1 + avcScale * avc)) ;
-  MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE);
+  float midHeight = fmin (barScale * (brightness [1] / (1 + avcScale * avc)), wallHeight);
+  MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
+  lightFactor = fmin (1.0, midHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [1] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * midHeight;
+  glLightfv(GL_LIGHT1, GL_DIFFUSE, sourceLight);
+  glLightfv(GL_LIGHT1, GL_POSITION, lightPos);
+  glEnable(GL_LIGHT1);
+  sourceLight [1] = 0.;
   //right
   glColor3f (0.0f, 0.0f, 1.0f);
-  float rightHeight = barScale * (brightness [2] / (1 + avcScale * avc)) ;
+  float rightHeight = fmin (barScale * (brightness [2] / (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (barSpacing, 0., 0.);
-  MultiColumn (barWidth, rightHeight, 10, 10, GL_TRUE, GL_FALSE);
+  MultiColumn (barWidth, rightHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
+  lightFactor = fmin (1.0, rightHeight / (lightHeightThreshold * wallHeight));
+  sourceLight [2] = lightFactor * 1.;
+  lightPos [1] = lightFactor * topLightScale * rightHeight;
+  glLightfv(GL_LIGHT2, GL_DIFFUSE, sourceLight);
+  glLightfv(GL_LIGHT2, GL_POSITION, lightPos);
+  glEnable(GL_LIGHT2);
+  sourceLight [2] = 0.;
   glPopMatrix ();
-
-
-  
-  /*
-  // Front Face ///////////////////////////////////
-  glBegin(GL_QUADS);
-  // Pointing straight out Z
-  glNormal3f(0.0f, 0.0f, 1.0f);	
-
-  // Left Panel
-  glVertex3f(-50.0f, 50.0f, fZ);
-  glVertex3f(-50.0f, -50.0f, fZ);
-  glVertex3f(-35.0f, -50.0f, fZ);
-  glVertex3f(-35.0f,50.0f,fZ);
-
-  // Right Panel
-  glVertex3f(50.0f, 50.0f, fZ);
-  glVertex3f(35.0f, 50.0f, fZ);
-  glVertex3f(35.0f, -50.0f, fZ);
-  glVertex3f(50.0f,-50.0f,fZ);
-
-  // Top Panel
-  glVertex3f(-35.0f, 50.0f, fZ);
-  glVertex3f(-35.0f, 35.0f, fZ);
-  glVertex3f(35.0f, 35.0f, fZ);
-  glVertex3f(35.0f, 50.0f,fZ);
-
-  // Bottom Panel
-  glVertex3f(-35.0f, -35.0f, fZ);
-  glVertex3f(-35.0f, -50.0f, fZ);
-  glVertex3f(35.0f, -50.0f, fZ);
-  glVertex3f(35.0f, -35.0f,fZ);
-
-  // Top length section ////////////////////////////
-  // Normal points up Y axis
-  glNormal3f(0.0f, 1.0f, 0.0f);
-  glVertex3f(-50.0f, 50.0f, fZ);
-  glVertex3f(50.0f, 50.0f, fZ);
-  glVertex3f(50.0f, 50.0f, bZ);
-  glVertex3f(-50.0f,50.0f,bZ);
-		
-  // Bottom section
-  glNormal3f(0.0f, -1.0f, 0.0f);
-  glVertex3f(-50.0f, -50.0f, fZ);
-  glVertex3f(-50.0f, -50.0f, bZ);
-  glVertex3f(50.0f, -50.0f, bZ);
-  glVertex3f(50.0f, -50.0f, fZ);
-
-  // Left section
-  glNormal3f(1.0f, 0.0f, 0.0f);
-  glVertex3f(50.0f, 50.0f, fZ);
-  glVertex3f(50.0f, -50.0f, fZ);
-  glVertex3f(50.0f, -50.0f, bZ);
-  glVertex3f(50.0f, 50.0f, bZ);
-
-  // Right Section
-  glNormal3f(-1.0f, 0.0f, 0.0f);
-  glVertex3f(-50.0f, 50.0f, fZ);
-  glVertex3f(-50.0f, 50.0f, bZ);
-  glVertex3f(-50.0f, -50.0f, bZ);
-  glVertex3f(-50.0f, -50.0f, fZ);
-  glEnd();
-
-  glFrontFace(GL_CW);		// clock-wise polygons face out
-
-  glBegin(GL_QUADS);
-  // Back section
-  // Pointing straight out Z
-  glNormal3f(0.0f, 0.0f, -1.0f);	
-
-  // Left Panel
-  glVertex3f(-50.0f, 50.0f, bZ);
-  glVertex3f(-50.0f, -50.0f, bZ);
-  glVertex3f(-35.0f, -50.0f, bZ);
-  glVertex3f(-35.0f,50.0f,bZ);
-
-  // Right Panel
-  glVertex3f(50.0f, 50.0f, bZ);
-  glVertex3f(35.0f, 50.0f, bZ);
-  glVertex3f(35.0f, -50.0f, bZ);
-  glVertex3f(50.0f,-50.0f,bZ);
-
-  // Top Panel
-  glVertex3f(-35.0f, 50.0f, bZ);
-  glVertex3f(-35.0f, 35.0f, bZ);
-  glVertex3f(35.0f, 35.0f, bZ);
-  glVertex3f(35.0f, 50.0f,bZ);
-
-  // Bottom Panel
-  glVertex3f(-35.0f, -35.0f, bZ);
-  glVertex3f(-35.0f, -50.0f, bZ);
-  glVertex3f(35.0f, -50.0f, bZ);
-  glVertex3f(35.0f, -35.0f,bZ);
-	
-  // Insides /////////////////////////////
-  glColor3f(0.75f, 0.75f, 0.75f);
-
-  // Normal points up Y axis
-  glNormal3f(0.0f, 1.0f, 0.0f);
-  glVertex3f(-35.0f, 35.0f, fZ);
-  glVertex3f(35.0f, 35.0f, fZ);
-  glVertex3f(35.0f, 35.0f, bZ);
-  glVertex3f(-35.0f,35.0f,bZ);
-		
-  // Bottom section
-  glNormal3f(0.0f, 1.0f, 0.0f);
-  glVertex3f(-35.0f, -35.0f, fZ);
-  glVertex3f(-35.0f, -35.0f, bZ);
-  glVertex3f(35.0f, -35.0f, bZ);
-  glVertex3f(35.0f, -35.0f, fZ);
-
-  // Left section
-  glNormal3f(1.0f, 0.0f, 0.0f);
-  glVertex3f(-35.0f, 35.0f, fZ);
-  glVertex3f(-35.0f, 35.0f, bZ);
-  glVertex3f(-35.0f, -35.0f, bZ);
-  glVertex3f(-35.0f, -35.0f, fZ);
-
-  // Right Section
-  glNormal3f(-1.0f, 0.0f, 0.0f);
-  glVertex3f(35.0f, 35.0f, fZ);
-  glVertex3f(35.0f, -35.0f, fZ);
-  glVertex3f(35.0f, -35.0f, bZ);
-  glVertex3f(35.0f, 35.0f, bZ);
-  glEnd();*/
-
-  glFrontFace(GL_CCW);		// Counter clock-wise polygons face out
 
   // Restore the matrix state
   glPopMatrix();
