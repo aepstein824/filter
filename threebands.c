@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include <jack/jack.h>
 
@@ -25,6 +26,7 @@
 //declare opengl callbacks
 void ChangeSize (int w, int h);
 void SetupScene ();
+void Keyboard (unsigned char key, int x, int y);
 void SpecialKeys (int key, int x, int y);
 void RenderScene ();
 
@@ -55,7 +57,8 @@ iirfilter_t *brightnessFilters[3];
 //opengl parameters
 static GLfloat xRot = 0.0f;
 static GLfloat yRot = 0.0f;
-
+int isRotating = 0;
+clock_t startTick = 0;
 
 /**
  * The process callback for this JACK application is called in a
@@ -107,6 +110,7 @@ int main (int argc, char *argv[])
   glutInitWindowSize (800, 600);
   glutCreateWindow ("Threebands");
   glutReshapeFunc (ChangeSize);
+  glutKeyboardFunc (Keyboard);
   glutSpecialFunc (SpecialKeys);
   glutDisplayFunc (RenderScene);
   glutIdleFunc (RenderScene);
@@ -300,6 +304,18 @@ void SetupScene()
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
+//
+void Keyboard(unsigned char key, int x, int y){
+  switch(key){
+  case ' ':
+    isRotating = !isRotating;
+    startTick = clock ();
+    break;
+  default:
+    break;
+  }
+  return;
+}
 
 // Respond to arrow keys
 void SpecialKeys(int key, int x, int y)
@@ -310,11 +326,14 @@ void SpecialKeys(int key, int x, int y)
   if(key == GLUT_KEY_DOWN)
     xRot += 5.0f;
 
-  if(key == GLUT_KEY_LEFT)
-    yRot -= 5.0f;
+  if (!isRotating)
+    {
+      if(key == GLUT_KEY_LEFT)
+	yRot -= 5.0f;
 
-  if(key == GLUT_KEY_RIGHT)
-    yRot += 5.0f;
+      if(key == GLUT_KEY_RIGHT)
+	yRot += 5.0f;
+    }
                 
   xRot = (GLfloat)((const int)xRot % 360);
   yRot = (GLfloat)((const int)yRot % 360);
@@ -387,7 +406,7 @@ void RenderScene(void)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  
 
-  float wallWidth = 350;
+  float wallWidth = 500;
   float columnWidth = 20;
   float wallHeight = 200;
   float barScale = 500;
@@ -399,12 +418,14 @@ void RenderScene(void)
   float topLightScale = .9;
   float wallBrightness = .2;
   float lightHeightThreshold = .5;
-
+  double rotFreq = 5;
 
   // Save the matrix state and do the rotations
   glPushMatrix();
   glTranslatef(0.0f, -.5 * wallHeight, -.45 * wallWidth);
   glRotatef(xRot, 1.0f, 0.0f, 0.0f);
+  if (isRotating)
+    yRot = (int) ((clock () - startTick) / ((float)CLOCKS_PER_SEC) * (360. / rotFreq)) % 360;    
   glRotatef(yRot, 0.0f, 1.0f, 0.0f);
 
   //room space, at 0 altitude, in the middle of the floor
