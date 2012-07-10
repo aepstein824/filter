@@ -10,7 +10,7 @@
 
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <glut.h>
+#include "glut.h"
 
 #include "ringbuffer.h"
 #include "polynomial.h"
@@ -97,7 +97,6 @@ void jack_shutdown (void *arg)
 }
 
 int srate (jack_nframes_t nframes, void *arg){
-  printf ("the sample rate is now %lu/sec\n", nframes);
   sr=nframes;
   return 0;
 }
@@ -156,17 +155,12 @@ int main (int argc, char *argv[])
 
   jack_set_sample_rate_callback (client, srate, 0);
 
-  /* display the current sample rate. 
-   */
-
-  printf ("engine sample rate: %" PRIu32 "\n",
-	  jack_get_sample_rate (client));
   sr=jack_get_sample_rate (client);
 
   analog_cutoff = tan (PI * cutoff / sr);
   analog_cutoff2 = tan (PI * cutoff2 / sr);
 
-  int mainOrder = 4;
+  int mainOrder = 2;
 	
   dccutter = create_iirfilter (2, TYPE_HIGH, tan (PI / sr), analog_cutoff2); //get rid of any dc
   avcfilter = create_iirfilter (2, TYPE_LOW, tan (PI * AVC_FREQ / sr), 0.0);
@@ -410,7 +404,7 @@ void RenderScene(void)
   float columnWidth = 20;
   float wallHeight = 200;
   float barScale = 500;
-  float avcScale = 1;
+  float avcScale = 0;
   float barFZ = columnWidth / 2;
   float barBZ = barFZ  - columnWidth;
   float barWidth = 20;
