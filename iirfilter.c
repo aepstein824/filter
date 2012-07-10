@@ -48,6 +48,7 @@ int clamp_order (int order, int min, int max)
 {
   if (order > max) order = max;
   if (order < min) order = min;
+  return order;
 }
 
 //polynomials should be pre-initialized to zero
