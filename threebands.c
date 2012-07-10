@@ -10,8 +10,7 @@
 
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include "glut.h"
-
+#include <glut.h>
 
 #include "ringbuffer.h"
 #include "polynomial.h"
@@ -98,13 +97,14 @@ void jack_shutdown (void *arg)
 }
 
 int srate (jack_nframes_t nframes, void *arg){
-  printf ("the sample rate is now %du/sec\n", nframes);
+  printf ("the sample rate is now %lu/sec\n", nframes);
   sr=nframes;
   return 0;
 }
 
 int main (int argc, char *argv[])
 {
+
   glutInit (&argc, argv);
   glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowSize (800, 600);
@@ -113,6 +113,7 @@ int main (int argc, char *argv[])
   glutKeyboardFunc (Keyboard);
   glutSpecialFunc (SpecialKeys);
   glutDisplayFunc (RenderScene);
+  glutIdleFunc (RenderScene);
   SetupScene ();
 
   const char **ports;
@@ -158,9 +159,9 @@ int main (int argc, char *argv[])
   /* display the current sample rate. 
    */
 
+  printf ("engine sample rate: %" PRIu32 "\n",
+	  jack_get_sample_rate (client));
   sr=jack_get_sample_rate (client);
-  printf ("engine sample rate: %d\n",
-	  sr);
 
   analog_cutoff = tan (PI * cutoff / sr);
   analog_cutoff2 = tan (PI * cutoff2 / sr);
@@ -176,7 +177,6 @@ int main (int argc, char *argv[])
     {
       brightnessFilters [i] = create_iirfilter (4, TYPE_LOW, tan (PI * BRIGHTNESS_FREQ / sr), 0.0);
     }
-
   
   /* create two ports */
   input_port = jack_port_register (client, "input",
@@ -192,7 +192,6 @@ int main (int argc, char *argv[])
 				  JACK_DEFAULT_AUDIO_TYPE,
 				  JackPortIsOutput, 0);
 
-  
   if ((input_port == NULL) || (high_port == NULL)) {
     fprintf(stderr, "no more JACK ports available\n");
     exit (1);
@@ -240,7 +239,8 @@ int main (int argc, char *argv[])
 
   /* keep running until stopped by the user */
   glutMainLoop();
-  
+
+
   /* this is never reached but if the program
      had some other way to exit besides being killed,
      they would be important to call.
@@ -401,6 +401,7 @@ void MultiColumn (double width, double height, int wNum, int hNum, int top, int 
 // Called to draw scene
 void RenderScene(void)
 {
+
   // Clear the window with current clearing color
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  
@@ -483,7 +484,7 @@ void RenderScene(void)
   glEnable(GL_LIGHT0);
   sourceLight [0] = 0.;
   glPopMatrix ();
-  //midglut
+  //mid
   glColor3f (0.0f, 1.0f, 0.0f);
   float midHeight = fmin (barScale * (brightness [1] / (1 + avcScale * avc)), wallHeight);
   MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);

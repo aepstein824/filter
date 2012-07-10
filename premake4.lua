@@ -8,20 +8,13 @@ solution "Threebands"
   kind "WindowedApp"
   language "C"
   files { "*.h", "*.c" }
-  links {"jack",  "m"}
+  includedirs {"/usr/include", "/usr/local/include/GL", "sb/", "/usr/include/GL"}
+  libdirs {"/usr/local/lib"}
+  links {"jack", "pthread", "rt", "glut", "GL", "GLU", "m"}
  
   configuration "Debug"
    defines {"DEBUG"}
    flags {"Symbols"}
-   
-  configuration "linux"
-   includedirs {"/usr/include", "/usr/local/include/GL", "/usr/include/GL"}
-   libdirs {"/usr/local/lib"}
-   links {"pthread", "rt", "GL", "GLU", "glut"}
-  
-  configuration "macosx"
-   includedirs {"/usr/include", "usr/local/include", "/usr/local/include/GL", "/usr/include/GL"}
-   links {"OpenGL.framework", "GLUT.framework"}
 
-  configuration "gmake"
+  configuration {"linux","gmake"}
    buildoptions {"-std=c99"}

@@ -7,7 +7,6 @@ ringbuffer_t* buffer_create(int size)
   created->current_size = 0;
   created->offset = 0;
   created->data = malloc(size*sizeof(double));
-  return created;
 }
 
 void inc_offset(ringbuffer_t* buffer)
