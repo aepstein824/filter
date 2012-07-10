@@ -188,7 +188,6 @@ double next_sample (iirfilter_t *system, double insample)
 {
   double next = 0;
 
-  
   buffer_append_first (system -> in_history, insample);
   
   for ( int i = 0; i <= system -> order; i++ )
@@ -201,7 +200,7 @@ double next_sample (iirfilter_t *system, double insample)
       // i - 1 takes into account that the y[n] isn't in the buffer because we're calculating it
       next -= creal ( system -> den . terms[i] ) * buffer_peek ( system -> out_history, i - 1 );
     }
-  next /= system -> den . terms[0];
+  next = next / system -> den . terms[0];
 
   buffer_append_first (system -> out_history, next);
   
