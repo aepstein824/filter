@@ -404,7 +404,7 @@ void RenderScene(void)
   float columnWidth = 20;
   float wallHeight = 200;
   float barScale = 500;
-  float avcScale = 0;
+  float avcScale = 1;
   float barFZ = columnWidth / 2;
   float barBZ = barFZ  - columnWidth;
   float barWidth = 20;
