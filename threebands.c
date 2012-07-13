@@ -46,6 +46,9 @@ int highestROrder = 1;
 
 double avc;
 double brightness[3];
+double userBrightness[4] = {1., 1., 1., 1.};
+float userBScaleMax = 10.0;
+float userBScaleFactor = 1.25;
 
 jack_nframes_t sr;
 
@@ -305,6 +308,30 @@ void Keyboard(unsigned char key, int x, int y){
     isRotating = !isRotating;
     startTick = clock ();
     break;
+  case 'q':
+    userBrightness[3] = fmin (userBScaleFactor * userBrightness[3], userBScaleMax);
+    break;
+  case 'a':
+    userBrightness[3] /= userBScaleFactor;
+    break;
+  case 'w':
+    userBrightness[0] = fmin (userBScaleFactor * userBrightness[0], userBScaleMax);
+    break;
+  case 's':
+    userBrightness[0] /= userBScaleFactor;
+    break;
+  case 'e':
+    userBrightness[1] = fmin (userBScaleFactor * userBrightness[1], userBScaleMax);
+    break;
+  case 'd':
+    userBrightness[1] /= userBScaleFactor;
+    break;
+  case 'r':
+    userBrightness[2] = fmin (userBScaleFactor * userBrightness[2], userBScaleMax);
+    break;
+  case 'f':
+    userBrightness[2] /= userBScaleFactor;
+    break;
   default:
     break;
   }
@@ -399,7 +426,6 @@ void RenderScene(void)
   // Clear the window with current clearing color
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  
-
   float wallWidth = 500;
   float columnWidth = 20;
   float wallHeight = 200;
@@ -412,7 +438,9 @@ void RenderScene(void)
   float topLightScale = .9;
   float wallBrightness = .2;
   float lightHeightThreshold = .5;
-  double rotFreq = 5;
+  float rotFreq = 5;
+  float pieSpacingFactor = .3;
+  float pieRadius = 30;
 
   // Save the matrix state and do the rotations
   glPushMatrix();
@@ -466,7 +494,8 @@ void RenderScene(void)
   float lightFactor = 1;
   //left
   glColor3f (1., 0., 0.);
-  float leftHeight = fmin (barScale * (brightness [0] / (1 + avcScale * avc)), wallHeight);
+  float leftHeight = fmin (barScale * (brightness[0] * userBrightness[0] * userBrightness[3]
+				       / (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (-barSpacing, 0., 0.);
   MultiColumn (barWidth, leftHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
@@ -480,7 +509,8 @@ void RenderScene(void)
   glPopMatrix ();
   //mid
   glColor3f (0.0f, 1.0f, 0.0f);
-  float midHeight = fmin (barScale * (brightness [1] / (1 + avcScale * avc)), wallHeight);
+  float midHeight = fmin (barScale * (brightness [1] * userBrightness[1] * userBrightness[3]
+				      / (1 + avcScale * avc)), wallHeight);
   MultiColumn (barWidth, midHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
   lightFactor = fmin (1.0, midHeight / (lightHeightThreshold * wallHeight));
   sourceLight [1] = lightFactor * 1.;
@@ -491,7 +521,8 @@ void RenderScene(void)
   sourceLight [1] = 0.;
   //right
   glColor3f (0.0f, 0.0f, 1.0f);
-  float rightHeight = fmin (barScale * (brightness [2] / (1 + avcScale * avc)), wallHeight);
+  float rightHeight = fmin (barScale * (brightness [2] * userBrightness[2] * userBrightness[3]
+					/ (1 + avcScale * avc)), wallHeight);
   glPushMatrix ();
   glTranslatef (barSpacing, 0., 0.);
   MultiColumn (barWidth, rightHeight, 10, 10, GL_TRUE, GL_FALSE, GL_FALSE);
@@ -504,6 +535,27 @@ void RenderScene(void)
   sourceLight [2] = 0.;
   glPopMatrix ();
 
+  glDisable (GL_LIGHTING);
+  glPushMatrix ();
+  glTranslatef (0, .5 * wallHeight, .45 * wallWidth);
+  float pieStartX = -1 * pieSpacingFactor * wallWidth;
+  float pieSpace = pieSpacingFactor * wallWidth;
+  for (int i = 0; i < 3; i++)
+    {
+      glBegin (GL_TRIANGLE_FAN);
+      glColor3f (1., 1., 1.);
+      glVertex3f (pieStartX + i * pieSpace, 0, 0);
+      for (float theta = 0; theta < 2 * PI * userBrightness[i] * userBrightness[3] / userBScaleMax;
+	   theta += 2 * PI / 100)
+	{
+	  glVertex3f (pieStartX + i * pieSpace + pieRadius * cos (theta),
+		    pieRadius * sin (theta), 0);
+	}
+      glEnd ();
+    }
+  glPopMatrix ();
+  glEnable (GL_LIGHTING);
+  
   // Restore the matrix state
   glPopMatrix();
 
