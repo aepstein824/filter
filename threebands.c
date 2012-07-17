@@ -314,8 +314,13 @@ void SetupScene()
 	  prgTex[i][3 * j + 2] = 4 * (64 - i);
 	}
     }
-  //glGenTextures (1, &texNum);
-  //glBindTexture (GL_TEXTURE_2D, texNum);
+  glGenTextures (1, &texNum);
+  glBindTexture (GL_TEXTURE_2D, texNum);
+  glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
   glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
   glTexImage2D (GL_TEXTURE_2D, //target
 		0, //level
@@ -402,12 +407,7 @@ void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum, int posNormal
   float tileWidth = width / wNum;
   float tileHeight = height / hNum;
   glEnable (GL_TEXTURE_2D);
-  //glBindTexture (GL_TEXTURE_2D, texNum);
-  glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+  glBindTexture (GL_TEXTURE_2D, texNum);
 
   glBegin (GL_QUADS);
   for (int i = 0; i < wNum; i++)
@@ -415,9 +415,9 @@ void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum, int posNormal
       for (int j = 0; j < hNum; j++)
 	{
 	  glTexCoord2d (i/(float)wNum, j/(float)hNum); glVertex3f (i * tileWidth, j * tileHeight, 0.0f);
-	  glTexCoord2d ((i+1)/(float)wNum, j/(float)hNum); glVertex3f (i * tileWidth, (j + 1) * tileHeight, 0.0f);
+	  glTexCoord2d (i/(float)wNum, (j+1)/(float)hNum); glVertex3f (i * tileWidth, (j + 1) * tileHeight, 0.0f);
 	  glTexCoord2d ((i+1)/(float)wNum, (j+1)/(float)hNum); glVertex3f ((i + 1) * tileWidth, (j + 1) * tileHeight, 0.0f);
-	  glTexCoord2d (i/(float)wNum, (j+1)/(float)hNum); glVertex3f ((i + 1) * tileWidth, j * tileHeight, 0.0f);
+	  glTexCoord2d ((i+1)/(float)wNum, j/(float)hNum); glVertex3f ((i + 1) * tileWidth, j * tileHeight, 0.0f);
 	}
     }
   glEnd ();
