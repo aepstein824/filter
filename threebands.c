@@ -321,7 +321,6 @@ void SetupScene()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-  glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
   glTexImage2D (GL_TEXTURE_2D, //target
 		0, //level
 		GL_RGB, //internal format
@@ -589,7 +588,7 @@ void RenderScene(void)
       glEnd ();
     }
   glPopMatrix ();
-  //glEnable (GL_LIGHTING);
+  glEnable (GL_LIGHTING);
   
   // Restore the matrix state
   glPopMatrix();
