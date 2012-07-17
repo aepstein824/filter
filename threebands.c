@@ -62,6 +62,9 @@ static GLfloat xRot = 0.0f;
 static GLfloat yRot = 0.0f;
 int isRotating = 0;
 clock_t startTick = 0;
+//textures
+GLuint prgTex[64][64*3];
+GLuint texNum = 0;
 
 /**
  * The process callback for this JACK application is called in a
@@ -243,6 +246,8 @@ int main (int argc, char *argv[])
      they would be important to call.
   */
 
+  glDeleteTextures (1, &texNum);
+
   destroy_iirfilter (dccutter);
   destroy_iirfilter (avcfilter);
   destroy_iirfilter (lowfilter);
@@ -282,7 +287,6 @@ void ChangeSize (int w, int h)
 // the scene.
 void SetupScene()
 {
-
   glEnable(GL_DEPTH_TEST);	// Hidden surface removal
   glFrontFace(GL_CW);		// Counter clock-wise polygons face out
   //glEnable(GL_CULL_FACE);		// Do not calculate inside of jet
@@ -296,9 +300,32 @@ void SetupScene()
 	
   // Set Material properties to follow glColor values
   glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-
+  
   // Black blue background
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+  // set up "texture"
+  for (int i = 0; i < 64; i++)
+    {
+      for (int j = 0; j < 64; j++)
+	{
+	  prgTex[i][3 * j + 0] = 4 * i;
+	  prgTex[i][3 * j + 1] = 4 * abs (32 - i);
+	  prgTex[i][3 * j + 2] = 4 * (64 - i);
+	}
+    }
+  //glGenTextures (1, &texNum);
+  //glBindTexture (GL_TEXTURE_2D, texNum);
+  glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+  glTexImage2D (GL_TEXTURE_2D, //target
+		0, //level
+		GL_RGB, //internal format
+		64, 64, //width, height
+		0, //border
+		GL_RGB, //data format
+		GL_UNSIGNED_BYTE, //unit of data
+		prgTex //texture
+		);
 }
 
 //
@@ -374,18 +401,27 @@ void MultiQuad (GLfloat width, GLfloat height, int wNum, int hNum, int posNormal
     }
   float tileWidth = width / wNum;
   float tileHeight = height / hNum;
+  glEnable (GL_TEXTURE_2D);
+  //glBindTexture (GL_TEXTURE_2D, texNum);
+  glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
   glBegin (GL_QUADS);
   for (int i = 0; i < wNum; i++)
     {
       for (int j = 0; j < hNum; j++)
 	{
-	  glVertex3f (i * tileWidth, j * tileHeight, 0.0f);
-	  glVertex3f (i * tileWidth, (j + 1) * tileHeight, 0.0f);
-	  glVertex3f ((i + 1) * tileWidth, (j + 1) * tileHeight, 0.0f);
-	  glVertex3f ((i + 1) * tileWidth, j * tileHeight, 0.0f);
+	  glTexCoord2d (i/(float)wNum, j/(float)hNum); glVertex3f (i * tileWidth, j * tileHeight, 0.0f);
+	  glTexCoord2d ((i+1)/(float)wNum, j/(float)hNum); glVertex3f (i * tileWidth, (j + 1) * tileHeight, 0.0f);
+	  glTexCoord2d ((i+1)/(float)wNum, (j+1)/(float)hNum); glVertex3f ((i + 1) * tileWidth, (j + 1) * tileHeight, 0.0f);
+	  glTexCoord2d (i/(float)wNum, (j+1)/(float)hNum); glVertex3f ((i + 1) * tileWidth, j * tileHeight, 0.0f);
 	}
     }
   glEnd ();
+  glDisable (GL_TEXTURE_2D);
 }
 
 void MultiColumn (double width, double height, int wNum, int hNum, int top, int bottom, int posNormal)
@@ -422,7 +458,6 @@ void MultiColumn (double width, double height, int wNum, int hNum, int top, int 
 // Called to draw scene
 void RenderScene(void)
 {
-
   // Clear the window with current clearing color
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  
@@ -460,7 +495,7 @@ void RenderScene(void)
   GLfloat lightPos[] = {0., 0., 0., 1.0f};
   GLfloat sourceLight [] = {0., 0., 0., 1.0f};
 
-  glColor3f (wallBrightness, wallBrightness, wallBrightness);	     
+  glColor3f (wallBrightness, wallBrightness, wallBrightness);
   //front wall
   glPushMatrix ();
   glTranslatef (-.5 * wallWidth, 0.0f, -.5 * wallWidth);
@@ -554,7 +589,7 @@ void RenderScene(void)
       glEnd ();
     }
   glPopMatrix ();
-  glEnable (GL_LIGHTING);
+  //glEnable (GL_LIGHTING);
   
   // Restore the matrix state
   glPopMatrix();
