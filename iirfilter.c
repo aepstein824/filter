@@ -1,6 +1,7 @@
 #include "iirfilter.h"
 #include "common.h"
 
+#include <math.h>
 
 iirfilter_t *create_iirfilter (int order, unsigned int type, double cutoff, double cutoff2)
 {
@@ -49,6 +50,11 @@ int clamp_order (int order, int min, int max)
   if (order > max) order = max;
   if (order < min) order = min;
   return order;
+}
+
+double bilinearDigitalFreq (double freq, int samplingRate)
+{
+  return tan (PI * freq / samplingRate);
 }
 
 //polynomials should be pre-initialized to zero
