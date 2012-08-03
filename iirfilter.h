@@ -12,6 +12,8 @@
 #define IIR_ORDER_MIN 1
 #define IIR_ORDER_MAX 10
 
+extern const double PI;
+
 typedef struct iirfilter
 {
   /**
@@ -43,6 +45,8 @@ typedef struct iirfilter
 
 iirfilter_t *create_iirfilter (int order, unsigned int type, double cutoff, double cutoff2);
 void destroy_iirfilter (iirfilter_t *victim);
+
+double bilinearDigitalFreq (double freq, int samplingRate);
 
 int clamp_order (int order, int min, int max);
 
